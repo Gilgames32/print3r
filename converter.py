@@ -1,45 +1,53 @@
+import csv
+import json
 from PIL import Image, ImageColor
 
-hexpalette = [
-    "#ffffff", # White
-    "#cc2929", # Red
-    "#e57a2e", # Orange
-    "#f2d43d", # Yellow
-    "#85cc3d", # Green
-    "#268026", # Dark Green
-    "#3399cc", # Blue
-    "#1f3399", # Dark Blue
-    "#823aa6", # Purple
-    "#f255be", # Pink
-    "#000000", # Black
-]
+palettepath = "palette.json"
+sourcepath = "img/debug1.png"
+outpath = "image.csv"
 
-rgbpalette = [ImageColor.getcolor(hexcolor, "RGB") for hexcolor in hexpalette]
 
-def closest_color(color, palette):
-    for i, palette_color in enumerate(palette):
-        if color == palette_color:
-            return i
+def load_palette():
+    with open(palettepath, "r") as palettefile:
+        palette = json.load(palettefile)
+
+    for color in palette:
+        palette[color]["rgb"] = ImageColor.getcolor(palette[color]["hex"], "RGB")
+
+    return palette
+
+
+def get_color_index(color, palette):
+    return palette.index(color)
 
 
 def convert_image_to_array(image_path):
+    # open in rgb
     image = Image.open(image_path)
-
     image = image.convert("RGB")
 
+    # get pixels as indexes
     pixel_data = list(image.getdata())
+    index_data = [get_color_index(pixel, load_palette()) for pixel in pixel_data]
 
-    index_data = [closest_color(pixel, rgbpalette) for pixel in pixel_data]
-
+    # convert to 2d array
     width, height = image.size
-    index_array = [index_data[i:i+width] for i in range(0, len(index_data), width)]
+    index_array = [index_data[i : i + width] for i in range(0, len(index_data), width)]
 
     return index_array
 
 
-image_path = "debug1.png"
-binary_array = convert_image_to_array(image_path)
-print("[")
-for row in binary_array:
-    print("\t" + str(row) + ",")
-print("]")
+def csv_writer(data):
+    with open(outpath, "w", newline="\n") as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerows(data)
+
+
+def main():
+    index_array = convert_image_to_array(sourcepath)
+    csv_writer(index_array)
+    print("Done!")
+
+
+if __name__ == "__main__":
+    main()
