@@ -4,6 +4,8 @@ from pybricks.ev3devices import Motor
 from pybricks.parameters import Port, Color, Button
 from pybricks.tools import wait
 
+from csv import reader
+from json import load
 
 # brick
 ev3 = EV3Brick()
@@ -13,14 +15,13 @@ ev3.light.on(Color.RED)
 class Pen:
     speed = 512
     press = 90
-    aspect = 1.6/2 # w/h
+    aspect = 1.6/2 # w/h, TODO: calibrate
     y_deadangle = -60
 
     def __init__(self, x_port: Port = Port.A, y_port: Port = Port.B, z_port: Port = Port.C):
         self.x = Motor(x_port)
         self.y = Motor(y_port)
         self.z = Motor(z_port)
-        self.y_dir = False
 
     def up(self):
         self.z.run_angle(Pen.speed, -Pen.press)
@@ -29,53 +30,50 @@ class Pen:
         self.z.run_angle(Pen.speed, Pen.press)
     
     def initialize(self):
-        broken_press = False
-        while True:
-            if Button.UP in ev3.buttons.pressed():
-                self.z.run(50)
-                broken_press = True
-            elif Button.DOWN in ev3.buttons.pressed():
-                self.z.run(-50)
-                broken_press = True
-            else:
-                self.z.run(0)
-            
+        # x and y manual calibration
+        while Button.CENTER not in ev3.buttons.pressed():
             if Button.LEFT in ev3.buttons.pressed():
                 self.x.run(Pen.speed)
             elif Button.RIGHT in ev3.buttons.pressed():
                 self.x.run(-Pen.speed)
             else:
                 self.x.run(0)
-            
-            if Button.CENTER in ev3.buttons.pressed():
-                break
+
+            if Button.UP in ev3.buttons.pressed():
+                self.y.run(Pen.speed)
+            elif Button.DOWN in ev3.buttons.pressed():
+                self.y.run(-Pen.speed)
+            else:
+                self.y.run(0)
+
+        # wait for buttons up
+        while len(ev3.buttons.pressed()) > 0:
+            pass
+
+        # z manual calibration
+        broken_press = False
+        while Button.CENTER not in ev3.buttons.pressed():
+            if Button.UP in ev3.buttons.pressed():
+                self.z.run(-60)
+                broken_press = True
+            elif Button.DOWN in ev3.buttons.pressed():
+                self.z.run(60)
+                broken_press = True
+            else:
+                self.z.run(0)
 
         if broken_press:
             pen.up()
 
         self.x.reset_angle(0)
-
-        #self.y.run_angle(100, Pen.y_deadangle)
-        #self.y.run_angle(100, -Pen.y_deadangle)
-        self.y_dir = True
         self.y.reset_angle(0)
-
         self.z.reset_angle(0)
         
-
 
     def run_x(self, angle, wait=True):
         self.x.run_angle(Pen.speed, -angle, wait=wait)
 
-    def run_y(self, angle, wait=True):
-        # deadzone patch
-        if self.y_dir and angle < 0:
-            self.y.run_angle(Pen.speed, -Pen.y_deadangle)
-            self.y_dir = False
-        elif not self.y_dir and angle > 0:
-            self.y.run_angle(Pen.speed, Pen.y_deadangle)
-            self.y_dir = True
-        
+    def run_y(self, angle, wait=True):        
         self.y.run_angle(Pen.speed * Pen.aspect, -angle * Pen.aspect, wait=wait)
 
     def reset(self):
@@ -98,89 +96,34 @@ class Pen:
 
 
 
-def print_w():
-    pen.down()
-    pen.run_y(300, wait=False)
-    pen.run_x(300)
-    pen.run_y(-300, wait=False)
-    pen.run_x(300)
-    pen.run_y(300, wait=False)
-    pen.run_x(300)
-    pen.run_y(-300, wait=False)
-    pen.run_x(300)
-    pen.up()
-
-def print_square():
-    pen.down()
-    pen.run_y(300)
-    pen.run_x(300)
-    pen.run_y(-300)
-    pen.run_x(-300)
-    pen.up()
-
-def print_square2():
-    pen.down()
-    pen.line(0, 400)
-    pen.line(400, 400)
-    pen.line(400, 0)
-    pen.line(0, 0)
-    pen.up()
 
 def print_image():
     pixel_size = 32
-    palette = [
-        "White",
-        "Red",
-        "Orange",
-        "Yellow",
-        "Green",
-        "Dark Green",
-        "Blue",
-        "Dark Blue",
-        "Purple",
-        "Pink",
-        "Black",
-    ]
-    img = [
-        [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10],
-        [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10],
-        [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10],
-        [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10],
-        [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10],
-        [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10],
-        [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10],
-        [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10],
-        [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10],
-        [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10],
-        [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10],
-        [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10],
-        [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10],
-        [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10],
-        [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10],
-        [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10],
-        [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10],
-        [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10],
-        [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10],
-        [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10],
-        [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10],
-        [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10],
-        [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10],
-        [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10],
-        [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10],
-        [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10],
-        [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10],
-        [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10],
-        [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10],
-        [10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 0, 0, 10, 10, 10, 10, 10, 10, 10, 10],
-    ]
-    for i, color in enumerate(palette):
-        if color == "White":
+
+    with open("palette.json", "r") as palettefile:
+        palette = load(palettefile)
+
+    img = []
+    with open("image.csv", "r") as csvfile:
+        reader = reader(csvfile)
+        for row in reader:
+            img.append([int(pixel) for pixel in row])
+
+    # too much voodoo or divine intellect? call it
+    flat_img = [pixel for row in img for pixel in row]        
+
+    for key, color in palette.items():
+        i = int(key)
+        if i == 0:
+            continue
+        
+        color["count"] = flat_img.count(i)
+        if color["count"] == 0:
             continue
 
+        ev3.light.on(Color.RED)
         ev3.screen.clear()
-        ev3.screen.draw_text(50, 50, color)
+        ev3.screen.print(color["name"] + ": " + color["count"])
 
         while True:
             if len(ev3.buttons.pressed()) == 0:
@@ -194,6 +137,8 @@ def print_image():
                 break
         if skip:
             continue
+
+        ev3.light.on(Color.ORANGE)
 
         pen.dot(i * pixel_size, -100)
 
@@ -209,9 +154,7 @@ def print_image():
 
 pen = Pen()
 pen.initialize()
-
 print_image()
-
 pen.reset()
     
 
