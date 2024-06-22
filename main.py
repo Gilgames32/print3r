@@ -1,162 +1,178 @@
-#!/usr/bin/env pybricks-micropython
-from pybricks.hubs import EV3Brick
-from pybricks.ev3devices import Motor
-from pybricks.parameters import Port, Color, Button
-from pybricks.tools import wait
+#!/usr/bin/env python3
 
-from csv import reader
+from time import sleep
 from json import load
+from csv import reader
 
-# brick
-ev3 = EV3Brick()
-ev3.light.on(Color.RED)
+from ev3dev2.led import Leds
+from ev3dev2.motor import LargeMotor, MediumMotor, OUTPUT_A, OUTPUT_B, OUTPUT_C, SpeedDPS
+from ev3dev2.button import Button
+from ev3dev2.display import Display
+import ev3dev2.fonts as fonts
+
+TitleFont = fonts.load("lutBS18")
+
+class Brick:
+    def __init__(self):
+        self.leds = Leds()
+        self.buttons = Button()
+        self.display = Display()
+    
+    def busy(self):
+        self.leds.set_color("LEFT", "AMBER")
+        self.leds.set_color("RIGHT", "AMBER")
+    
+    def waiting(self):
+        self.leds.set_color("LEFT", "RED")
+        self.leds.set_color("RIGHT", "RED")
+    
+    def wait_no_presses(self):
+        self.buttons.wait_for_released([Button.enter, Button.left, Button.right, Button.up, Button.down])
+
+    def title(self, text):
+        self.text(text, 0, 50, clear_screen=True)
+
+    def text(self, text, x=0, y=0, clear_screen=False):
+        if clear_screen:
+            self.display.clear()
+        self.display.draw.text((x, y), text)
+        self.display.update()
+        
 
 
 class Pen:
-    speed = 512
-    press = 90
-    aspect = 1.6/2 # w/h, TODO: calibrate
-    y_deadangle = -60
+    SPEED = 512
+    PRESS_SPEED = 512
+    PRESS_ANGLE = 90
+    ASPECT = 1 # W/H TODO: calibrate
+    PIXELSIZE = 30
 
-    def __init__(self, x_port: Port = Port.A, y_port: Port = Port.B, z_port: Port = Port.C):
-        self.x = Motor(x_port)
-        self.y = Motor(y_port)
-        self.z = Motor(z_port)
-
-    def up(self):
-        self.z.run_angle(Pen.speed, -Pen.press)
-
-    def down(self):
-        self.z.run_angle(Pen.speed, Pen.press)
+    def __init__(self):
+        self.brick = Brick()
+        self.x = LargeMotor(OUTPUT_A)
+        self.y = LargeMotor(OUTPUT_B)
+        self.z = MediumMotor(OUTPUT_C)
     
+    def up(self):
+        self.z.on_for_degrees(SpeedDPS(Pen.PRESS_SPEED), -Pen.PRESS_ANGLE)
+    
+    def down(self):
+        self.z.on_for_degrees(SpeedDPS(Pen.PRESS_SPEED), Pen.PRESS_ANGLE)
+
     def initialize(self):
+        self.brick.title("Calibration\nX and Y")
+        self.brick.waiting()
         # x and y manual calibration
-        while Button.CENTER not in ev3.buttons.pressed():
-            if Button.LEFT in ev3.buttons.pressed():
-                self.x.run(Pen.speed)
-            elif Button.RIGHT in ev3.buttons.pressed():
-                self.x.run(-Pen.speed)
+        while not self.brick.buttons.enter:
+            if self.brick.buttons.left:
+                self.x.on(SpeedDPS(-Pen.SPEED))
+            elif self.brick.buttons.right:
+                self.x.on(SpeedDPS(Pen.SPEED))
             else:
-                self.x.run(0)
+                self.x.off()
 
-            if Button.UP in ev3.buttons.pressed():
-                self.y.run(Pen.speed)
-            elif Button.DOWN in ev3.buttons.pressed():
-                self.y.run(-Pen.speed)
+            if self.brick.buttons.up:
+                self.y.on(SpeedDPS(Pen.SPEED))
+            elif self.brick.buttons.down:
+                self.y.on(SpeedDPS(-Pen.SPEED))
             else:
-                self.y.run(0)
+                self.y.off()
+            
+            sleep(0.01)
 
-        # wait for buttons up
-        while len(ev3.buttons.pressed()) > 0:
-            pass
+        self.brick.wait_no_presses()
+        self.brick.title("Calibration\nZ (Pen)")
 
         # z manual calibration
         broken_press = False
-        while Button.CENTER not in ev3.buttons.pressed():
-            if Button.UP in ev3.buttons.pressed():
-                self.z.run(-60)
+        while not self.brick.buttons.enter:
+            if self.brick.buttons.up:
+                self.z.on(SpeedDPS(-60))
                 broken_press = True
-            elif Button.DOWN in ev3.buttons.pressed():
-                self.z.run(60)
+            elif self.brick.buttons.down:
+                self.z.on(SpeedDPS(60))
                 broken_press = True
             else:
-                self.z.run(0)
+                self.z.off()
+
+            sleep(0.01)
 
         if broken_press:
-            pen.up()
-
-        self.x.reset_angle(0)
-        self.y.reset_angle(0)
-        self.z.reset_angle(0)
+            self.up()
         
-
-    def run_x(self, angle, wait=True):
-        self.x.run_angle(Pen.speed, -angle, wait=wait)
-
-    def run_y(self, angle, wait=True):        
-        self.y.run_angle(Pen.speed * Pen.aspect, -angle * Pen.aspect, wait=wait)
-
-    def reset(self):
-        self.z.run_target(Pen.speed, 0)
-        self.y.run_target(Pen.speed, 0, wait=False)
-        self.x.run_target(Pen.speed, 0)
-
-    def line(self, x, y):
-        delta_x = x - self.x.angle()
-        delta_y = y - self.y.angle()
-    
-        self.x.run_target(Pen.speed, x, wait=False)
-        self.y.run_target(Pen.speed, y * Pen.aspect)
+        self.x.reset()
+        self.y.reset()
+        self.z.reset()
     
     def dot(self, x, y):
-        self.y.run_target(Pen.speed, y * Pen.aspect)
-        self.x.run_target(Pen.speed, x)
+        self.x.on_to_position(SpeedDPS(Pen.SPEED), x * Pen.ASPECT)
+        self.y.on_to_position(SpeedDPS(Pen.SPEED), y)
         self.down()
         self.up()
 
+    def gohome(self):
+        self.x.on_to_position(SpeedDPS(Pen.SPEED), 0, block=False)
+        self.y.on_to_position(SpeedDPS(Pen.SPEED), 0) # TODO block=False and check later for both
 
+    def image(self):
+        with open("palette.json", "r") as palettefile:
+            palette = load(palettefile)
 
+        img = []
+        with open("image.csv", "r") as csvfile:
+            csvreader = reader(csvfile)
+            for row in csvreader:
+                img.append([int(pixel) for pixel in row])
 
-def print_image():
-    pixel_size = 32
+        # too much voodoo or divine intellect? call it
+        flat_img = [pixel for row in img for pixel in row]
 
-    with open("palette.json", "r") as palettefile:
-        palette = load(palettefile)
+        for key, color in palette.items():
+            i = int(key)
+            if i == 0:
+                continue
+            
+            color["count"] = flat_img.count(i)
+            if color["count"] == 0:
+                continue
 
-    img = []
-    with open("image.csv", "r") as csvfile:
-        reader = reader(csvfile)
-        for row in reader:
-            img.append([int(pixel) for pixel in row])
+            self.brick.text("Color\n" + color["name"] + "\nDots\n" + str(color["count"]), x=0, y=0, clear_screen=True)
+            self.brick.wait_no_presses()
 
-    # too much voodoo or divine intellect? call it
-    flat_img = [pixel for row in img for pixel in row]        
+            self.brick.waiting()
+            skipcolor = False
+            while True:
+                if self.brick.buttons.enter:
+                    break
+                elif self.brick.buttons.up or self.brick.buttons.down:
+                    skipcolor = True
+                    break
+                sleep(0.01)
 
-    for key, color in palette.items():
-        i = int(key)
-        if i == 0:
+            if skipcolor:
+                continue
+
+            # TODO remove
             continue
-        
-        color["count"] = flat_img.count(i)
-        if color["count"] == 0:
-            continue
 
-        ev3.light.on(Color.RED)
-        ev3.screen.clear()
-        ev3.screen.print(color["name"] + ": " + color["count"])
+            self.brick.busy()
 
-        while True:
-            if len(ev3.buttons.pressed()) == 0:
-                break
-        skip = False
-        while True:
-            if Button.CENTER in ev3.buttons.pressed():
-                break
-            elif Button.UP in ev3.buttons.pressed():
-                skip = True
-                break
-        if skip:
-            continue
+            self.dot(i * Pen.PIXELSIZE, -2 * Pen.PIXELSIZE)
 
-        ev3.light.on(Color.ORANGE)
+            for y, row in enumerate(img):
+                if y % 2 == 0:
+                    for x, pixel in enumerate(row):
+                        if pixel == i:
+                            self.dot(x * Pen.PIXELSIZE, y * Pen.PIXELSIZE)
+                else:
+                    for x, pixel in reversed(list(enumerate(row))):
+                        if pixel == i:
+                            self.dot(x * Pen.PIXELSIZE, y * Pen.PIXELSIZE)
 
-        pen.dot(i * pixel_size, -100)
-
-        for y, row in enumerate(img):
-            if y % 2 == 0:
-                for x, pixel in enumerate(row):
-                    if pixel == i:
-                        pen.dot(x * pixel_size, y * pixel_size)
-            else:
-                for x, pixel in reversed(list(enumerate(row))):
-                    if pixel == i:
-                        pen.dot(x * pixel_size, y * pixel_size)
 
 pen = Pen()
 pen.initialize()
-print_image()
-pen.reset()
-    
+pen.image()
 
+sleep(5)
 
-    
