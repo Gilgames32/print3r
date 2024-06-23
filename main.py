@@ -44,8 +44,8 @@ class Pen:
     SPEED = 200
     PRESS_SPEED = SPEED
     PRESS_ANGLE = 90
-    ASPECT = 1 # W/H TODO: calibrate
-    PIXELSIZE = 25
+    ASPECT = 90/114 # W/H 
+    PIXELSIZE = 35
 
     def __init__(self):
         self.brick = Brick()
@@ -105,8 +105,8 @@ class Pen:
         self.z.reset()
     
     def dot(self, x, y):
-        self.x.on_to_position(SpeedDPS(Pen.SPEED), -x * Pen.ASPECT)
-        self.y.on_to_position(SpeedDPS(Pen.SPEED), -y)
+        self.x.on_to_position(SpeedDPS(Pen.SPEED), -x)
+        self.y.on_to_position(SpeedDPS(Pen.SPEED), -y * Pen.ASPECT)
         self.down()
         self.up()
 
@@ -127,8 +127,8 @@ class Pen:
         # too much voodoo or divine intellect? call it
         flat_img = [pixel for row in img for pixel in row]
 
-        for key, color in palette.items():
-            i = int(key)
+        for i in range(len(palette)):
+            color = palette[str(i)]
             if i == 0:
                 continue
             

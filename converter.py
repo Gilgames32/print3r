@@ -2,7 +2,7 @@ import csv
 import json
 from PIL import Image, ImageColor
 
-sourcepath = ".img/pixelart.png"
+sourcepath = ".img/ralsei2.png"
 
 palettepath = "palette.json"
 outpath = "image.csv"
