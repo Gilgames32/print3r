@@ -41,11 +41,11 @@ class Brick:
 
 
 class Pen:
-    SPEED = 512
-    PRESS_SPEED = 512
+    SPEED = 200
+    PRESS_SPEED = SPEED
     PRESS_ANGLE = 90
     ASPECT = 1 # W/H TODO: calibrate
-    PIXELSIZE = 30
+    PIXELSIZE = 25
 
     def __init__(self):
         self.brick = Brick()
@@ -105,8 +105,8 @@ class Pen:
         self.z.reset()
     
     def dot(self, x, y):
-        self.x.on_to_position(SpeedDPS(Pen.SPEED), x * Pen.ASPECT)
-        self.y.on_to_position(SpeedDPS(Pen.SPEED), y)
+        self.x.on_to_position(SpeedDPS(Pen.SPEED), -x * Pen.ASPECT)
+        self.y.on_to_position(SpeedDPS(Pen.SPEED), -y)
         self.down()
         self.up()
 
@@ -152,9 +152,6 @@ class Pen:
             if skipcolor:
                 continue
 
-            # TODO remove
-            continue
-
             self.brick.busy()
 
             self.dot(i * Pen.PIXELSIZE, -2 * Pen.PIXELSIZE)
@@ -173,6 +170,7 @@ class Pen:
 pen = Pen()
 pen.initialize()
 pen.image()
+pen.gohome()
 
 sleep(5)
 

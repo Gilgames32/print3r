@@ -2,10 +2,12 @@ import csv
 import json
 from PIL import Image, ImageColor
 
+sourcepath = ".img/pixelart.png"
+
 palettepath = "palette.json"
-sourcepath = "img/debug1.png"
 outpath = "image.csv"
 
+mirror = False
 
 def load_palette():
     with open(palettepath, "r") as palettefile:
@@ -18,13 +20,20 @@ def load_palette():
 
 
 def get_color_index(color, palette):
-    return palette.index(color)
+    for index, palette_color in palette.items():
+        if color == palette_color["rgb"]:
+            return int(index)
+
+    return 0
 
 
 def convert_image_to_array(image_path):
     # open in rgb
     image = Image.open(image_path)
     image = image.convert("RGB")
+
+    if mirror:
+        image = image.transpose(Image.FLIP_LEFT_RIGHT)
 
     # get pixels as indexes
     pixel_data = list(image.getdata())
