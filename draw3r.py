@@ -8,6 +8,16 @@ class Draw3r:
         self.hub = hub
         self.pen = pen
 
+    def initialize(self):
+        self.pen.initialize()
+    
+    def finalize(self):
+        self.pen.up()
+        self.pen.gohome()
+        self.hub.title("Done. Empty deck?")
+        if not self.hub.choice():
+            self.pen.empty()
+
     def image(self, imagefile, palettefile):
         with open(palettefile, "r") as palettefile:
             palette = json.load(palettefile)
@@ -64,6 +74,7 @@ class Draw3r:
                 lines.append([int(coord) for coord in row])
         
         # TODO busy n shi
+        self.pen.dotcoord(0, -5)
 
         for line in lines:
             self.pen.line(*line)

@@ -39,10 +39,10 @@ class Brick(IHub):
 
     def choice(self):
         while True:
-            if self.hub.buttons.enter:
-                return False
-            elif self.hub.buttons.up or self.hub.buttons.down:
+            if self.buttons.enter:
                 return True
+            elif self.buttons.up or self.buttons.down:
+                return False
             time.sleep(0.01)
 
     def title(self, text):
@@ -55,8 +55,8 @@ class Brick(IHub):
         self.display.update()
 
 
-class Pen:
-    SPEED = 200
+class Pen(IPen):
+    SPEED = 360
     PRESS_SPEED = SPEED
     PRESS_ANGLE = 90
     ASPECT = 90 / 114  # W/H
@@ -67,12 +67,20 @@ class Pen:
         self.x = LargeMotor(OUTPUT_A)
         self.y = LargeMotor(OUTPUT_B)
         self.z = MediumMotor(OUTPUT_C)
+        self.headpos = (0, 0)
+        self.headup = False
 
     def up(self):
+        if self.headup:
+            return
         self.z.on_for_degrees(SpeedDPS(Pen.PRESS_SPEED), -Pen.PRESS_ANGLE)
+        self.headup = True
 
     def down(self):
+        if not self.headup:
+            return
         self.z.on_for_degrees(SpeedDPS(Pen.PRESS_SPEED), Pen.PRESS_ANGLE)
+        self.headup = False
 
     def initialize(self):
         self.brick.title("Calibration\nX and Y")
@@ -115,17 +123,59 @@ class Pen:
         if broken_press:
             self.up()
 
+        self.headup = True
+
         self.x.reset()
         self.y.reset()
         self.z.reset()
 
     def dotcoord(self, x, y):
+        x *= Pen.PIXELSIZE
+        y *= Pen.PIXELSIZE
         self.x.on_to_position(SpeedDPS(Pen.SPEED), -x)
         self.y.on_to_position(SpeedDPS(Pen.SPEED), -y * Pen.ASPECT)
+
         self.down()
         self.up()
+        
+
+    def goto(self, x, y):
+        dx = x - self.headpos[0]
+        dy = y - self.headpos[1]
+        
+        if dx == 0 and dy == 0:
+            return
+
+        if dx == 0:  # vertical line
+            speed_x = 0
+            speed_y = Pen.SPEED
+        elif dy == 0:  # horizontal line
+            speed_x =Pen.SPEED
+            speed_y = 0
+        else:
+            slope = dy / dx
+            speed_x = Pen.SPEED / (1 + slope ** 2) ** 0.5
+            speed_y = speed_x * slope
+
+        self.x.on_to_position(SpeedDPS(speed_x), -x, block=False)
+        self.y.on_to_position(SpeedDPS(speed_y * Pen.ASPECT), -y * Pen.ASPECT, block=False)
+        self.x.wait_until_not_moving()
+        self.y.wait_until_not_moving()
+        self.headpos = (x, y)
+
+
+    def line(self, x1, y1, x2, y2):
+        if self.headpos != (x1, y1):
+            self.up()
+            self.goto(x1, y1)
+        self.down()
+        self.goto(x2, y2)
+
 
     def gohome(self):
-        self.x.on_to_position(SpeedDPS(Pen.SPEED), 0, block=False)
-        # TODO block=False and check later for both
-        self.y.on_to_position(SpeedDPS(Pen.SPEED), 0)
+        self.goto(0, 0)
+
+    def empty(self):
+        self.up()
+        self.gohome()
+        self.y.on_for_rotations(SpeedDPS(720), -12)

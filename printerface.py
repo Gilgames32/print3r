@@ -34,5 +34,11 @@ class IPen:
     def dotcoord(self, x, y):
         pass
 
+    def line(self, x1, y1, x2, y2):
+        pass
+
     def gohome(self):
+        pass
+
+    def empty(self):
         pass

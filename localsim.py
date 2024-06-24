@@ -31,6 +31,7 @@ class VirtualHub:
 class VirtualPen:
     DOTSIZE = 3
     TOPLEFT = (100, 100)
+    SIMSCALE = 1/10
 
     def __init__(self):
         pygame.init()
@@ -58,13 +59,16 @@ class VirtualPen:
         pygame.draw.circle(self.screen, self.pencolor, (x, y), VirtualPen.DOTSIZE)
 
     def line(self, x1, y1, x2, y2):
-        x1 += VirtualPen.TOPLEFT[0]
-        y1 += VirtualPen.TOPLEFT[1]
-        x2 += VirtualPen.TOPLEFT[0]
-        y2 += VirtualPen.TOPLEFT[1]
+        x1 = x1 * VirtualPen.SIMSCALE + VirtualPen.TOPLEFT[0]
+        y1 = y1 * VirtualPen.SIMSCALE + VirtualPen.TOPLEFT[1]
+        x2 = x2 * VirtualPen.SIMSCALE + VirtualPen.TOPLEFT[0]
+        y2 = y2 * VirtualPen.SIMSCALE + VirtualPen.TOPLEFT[1]
         pygame.draw.line(self.screen, self.pencolor, (x1, y1), (x2, y2))
 
     def gohome(self):
         print("Pen returned to home")
         pass
+
+    def empty(self):
+        print("Deck emptied")
 

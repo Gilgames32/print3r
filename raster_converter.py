@@ -51,10 +51,12 @@ def csv_writer(data):
         writer = csv.writer(csvfile)
         writer.writerows(data)
 
+def convert(path):
+    index_array = convert_image_to_array(path)
+    csv_writer(index_array)
 
 def main():
-    index_array = convert_image_to_array(sourcepath)
-    csv_writer(index_array)
+    convert(sourcepath)
     print("Done!")
 
 
