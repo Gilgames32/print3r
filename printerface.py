@@ -42,3 +42,6 @@ class IPen:
 
     def empty(self):
         pass
+
+    def adjust(self):
+        pass

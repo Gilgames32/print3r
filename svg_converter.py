@@ -11,8 +11,8 @@ scalingFactor = 10
 def bezier_interpolate(p0, p1, p2, p3, t):
     return (1 - t)**3 * p0 + 3 * (1 - t)**2 * t * p1 + 3 * (1 - t) * t**2 * p2 + t**3 * p3
 
-def convert(path, scale=scalingFactor, steps=ip_steps):
-    paths, attributes = svgpathtools.svg2paths(path)
+def svg_convert(path, scale=scalingFactor, steps=ip_steps):
+    paths, _ = svgpathtools.svg2paths(path)
     lines = []
 
     # Process each path and convert to draw commands
@@ -39,7 +39,7 @@ def convert(path, scale=scalingFactor, steps=ip_steps):
             writer.writerow([int(c * scale) for c in row])
 
 def main():
-    convert(svg_file, scalingFactor, ip_steps)
+    svg_convert(svg_file, scalingFactor, ip_steps)
 
 if __name__ == "__main__":
     main()

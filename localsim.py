@@ -14,17 +14,12 @@ class VirtualHub:
 
     def choice(self):
         return True
-        virtualchoice = input("[Y/n]? ")
-        if virtualchoice.lower() in ["y", "yes", ""]:
-            return True
-        elif virtualchoice.lower() in ["n", "no"]:
-            return False
         
 
     def title(self, text):
         self.text(text)
 
-    def text(self, text, x, y, clear_screen):
+    def text(self, text, x=0, y=0, clear_screen=False):
         print(text)
 
 
@@ -71,4 +66,7 @@ class VirtualPen:
 
     def empty(self):
         print("Deck emptied")
+
+    def adjust(self):
+        return True
 

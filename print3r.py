@@ -57,6 +57,7 @@ class Brick(IHub):
 
 class Pen(IPen):
     SPEED = 360
+    SLOW_SPEED = 60
     PRESS_SPEED = SPEED
     PRESS_ANGLE = 90
     ASPECT = 90 / 114  # W/H
@@ -69,6 +70,7 @@ class Pen(IPen):
         self.z = MediumMotor(OUTPUT_C)
         self.headpos = (0, 0)
         self.headup = False
+        # TODO polarity
 
     def up(self):
         if self.headup:
@@ -110,10 +112,10 @@ class Pen(IPen):
         broken_press = False
         while not self.brick.buttons.enter:
             if self.brick.buttons.up:
-                self.z.on(SpeedDPS(-60))
+                self.z.on(SpeedDPS(-Pen.SLOW_SPEED))
                 broken_press = True
             elif self.brick.buttons.down:
-                self.z.on(SpeedDPS(60))
+                self.z.on(SpeedDPS(Pen.SLOW_SPEED))
                 broken_press = True
             else:
                 self.z.off()
@@ -124,7 +126,10 @@ class Pen(IPen):
             self.up()
 
         self.headup = True
+        self.resetpos()
 
+    def resetpos(self):
+        self.headpos = (0, 0)
         self.x.reset()
         self.y.reset()
         self.z.reset()
@@ -173,9 +178,62 @@ class Pen(IPen):
 
 
     def gohome(self):
-        self.goto(0, 0)
+        self.x.on_to_position(SpeedDPS(Pen.SPEED), 0, block=False)
+        self.y.on_to_position(SpeedDPS(Pen.SPEED * Pen.ASPECT), 0, block=False)
+        self.x.wait_until_not_moving()
+        self.y.wait_until_not_moving()
+        self.headpos = (0, 0)
 
     def empty(self):
         self.up()
         self.gohome()
         self.y.on_for_rotations(SpeedDPS(720), -12)
+
+    def adjust(self):
+        broken = False
+        self.gohome()
+
+        self.brick.title("Adjust\nX and Y")
+        self.brick.waiting()
+        # x and y manual calibration
+        while not self.brick.buttons.enter:
+            if self.brick.buttons.left:
+                self.x.on(SpeedDPS(-Pen.SLOW_SPEED))
+                broken = True
+            elif self.brick.buttons.right:
+                self.x.on(SpeedDPS(Pen.SLOW_SPEED))
+                broken = True
+            else:
+                self.x.off()
+
+            if self.brick.buttons.up:
+                self.y.on(SpeedDPS(Pen.SLOW_SPEED))
+                broken = True
+            elif self.brick.buttons.down:
+                self.y.on(SpeedDPS(-Pen.SLOW_SPEED))
+                broken = True
+            else:
+                self.y.off()
+
+            time.sleep(0.01)
+
+        self.brick.wait_no_presses()
+        self.brick.title("Adjust\nZ (Pen)")
+
+        # z manual calibration
+        while not self.brick.buttons.enter:
+            if self.brick.buttons.up:
+                self.z.on(SpeedDPS(-Pen.SLOW_SPEED/2))
+                broken = True
+            elif self.brick.buttons.down:
+                self.z.on(SpeedDPS(Pen.SLOW_SPEED/2))
+                broken = True
+            else:
+                self.z.off()
+
+            time.sleep(0.01)
+
+        if broken:
+            self.resetpos()
+
+        return not broken

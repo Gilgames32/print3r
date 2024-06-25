@@ -2,6 +2,7 @@ from printerface import *
 
 import csv
 import json
+import math
 
 class Draw3r:
     def __init__(self, hub: IHub, pen: IPen):
@@ -18,7 +19,30 @@ class Draw3r:
         if not self.hub.choice():
             self.pen.empty()
 
-    def image(self, imagefile, palettefile):
+
+    
+    def path(self, pathfile):
+        lines = []
+        with open(pathfile, "r") as csvfile:
+            csvreader = csv.reader(csvfile)
+            for row in csvreader:
+                lines.append([int(coord) for coord in row])
+        
+        # TODO busy n shi
+        self.pen.dotcoord(0, -5)
+
+        for line in lines:
+            self.pen.line(*line)
+
+    def hexagonal(self, palettefile, imagefile):
+        self.palettable(palettefile, imagefile, self.hexagonal_method)
+        self.finalize()
+
+    def pixel(self, palettefile, imagefile):
+        self.palettable(palettefile, imagefile, self.pixel_method)
+        self.finalize()
+
+    def palettable(self, palettefile, imagefile, method):
         with open(palettefile, "r") as palettefile:
             palette = json.load(palettefile)
 
@@ -31,6 +55,7 @@ class Draw3r:
         # too much voodoo or divine intellect? call it
         flat_img = [pixel for row in img for pixel in row]
 
+        adjustcount = 0
         for i in range(len(palette)):
             color = palette[str(i)]
             if i == 0:
@@ -55,28 +80,35 @@ class Draw3r:
 
             self.pen.activecolor(color["hex"])
 
+            self.pen.dotcoord(i + adjustcount, -2)
+            self.pen.dotcoord(0, -2 - (i + adjustcount))
+            while not self.pen.adjust():
+                self.pen.dotcoord(i + adjustcount, -2)
+                self.pen.dotcoord(0, -2 - (i + adjustcount))
+                adjustcount += 1
+
             self.hub.busy()
 
-            self.pen.dotcoord(i, -2)
+            method(img, i)
 
-            for y, row in enumerate(img):
-                erow = enumerate(row) if y % 2 == 0 else reversed(list(enumerate(row)))
-                for x, pixel in erow:
+    def pixel_method(self, img, i):
+        for y, row in enumerate(img):
+            erow = enumerate(row) if y % 2 == 0 else reversed(list(enumerate(row)))
+            for x, pixel in erow:
+                if pixel == i:
+                    self.pen.dotcoord(x, y)
+    
+
+    def hexagonal_method(self, img, i):
+        for y, row in enumerate(img):
+            ypos = y * 3 / 4
+            if y % 2 == 0:
+                for x, pixel in enumerate(row):
                     if pixel == i:
-                        self.pen.dotcoord(x, y)
-    
-    
-    def path(self, pathfile):
-        lines = []
-        with open(pathfile, "r") as csvfile:
-            csvreader = csv.reader(csvfile)
-            for row in csvreader:
-                lines.append([int(coord) for coord in row])
-        
-        # TODO busy n shi
-        self.pen.dotcoord(0, -5)
-
-        for line in lines:
-            self.pen.line(*line)
+                        self.pen.dotcoord(x + 0.5, ypos)
+            else:
+                for x, pixel in reversed(list(enumerate(row))):
+                    if pixel == i:
+                        self.pen.dotcoord(x, ypos)
 
         
