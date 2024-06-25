@@ -1,3 +1,7 @@
+"""
+two little interfaces used for the dependency injection
+"""
+
 class IHub:
     def busy(self):
         pass

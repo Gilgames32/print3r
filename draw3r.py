@@ -2,7 +2,7 @@ from printerface import *
 
 import csv
 import json
-import math
+
 
 class Draw3r:
     def __init__(self, hub: IHub, pen: IPen):
@@ -11,33 +11,34 @@ class Draw3r:
 
     def initialize(self):
         self.pen.initialize()
-    
+
     def finalize(self):
         self.pen.up()
         self.pen.gohome()
         self.hub.title("Done. Empty deck?")
-        if not self.hub.choice():
+        if self.hub.choice():
             self.pen.empty()
 
-
-    
+    # draw path
     def path(self, pathfile):
         lines = []
         with open(pathfile, "r") as csvfile:
             csvreader = csv.reader(csvfile)
             for row in csvreader:
                 lines.append([int(coord) for coord in row])
-        
+
         # TODO busy n shi
         self.pen.dotcoord(0, -5)
 
         for line in lines:
             self.pen.line(*line)
 
+    # draw dots on a hexagonal grid
     def hexagonal(self, palettefile, imagefile):
         self.palettable(palettefile, imagefile, self.hexagonal_method)
         self.finalize()
 
+    # draw dots on a pixel grid
     def pixel(self, palettefile, imagefile):
         self.palettable(palettefile, imagefile, self.pixel_method)
         self.finalize()
@@ -82,6 +83,7 @@ class Draw3r:
 
             self.pen.dotcoord(i + adjustcount, -2)
             self.pen.dotcoord(0, -2 - (i + adjustcount))
+            # adjusting because the markers used arent the same...
             while not self.pen.adjust():
                 self.pen.dotcoord(i + adjustcount, -2)
                 self.pen.dotcoord(0, -2 - (i + adjustcount))
@@ -97,7 +99,6 @@ class Draw3r:
             for x, pixel in erow:
                 if pixel == i:
                     self.pen.dotcoord(x, y)
-    
 
     def hexagonal_method(self, img, i):
         for y, row in enumerate(img):
@@ -110,5 +111,3 @@ class Draw3r:
                 for x, pixel in reversed(list(enumerate(row))):
                     if pixel == i:
                         self.pen.dotcoord(x, ypos)
-
-        

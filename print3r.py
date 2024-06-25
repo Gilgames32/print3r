@@ -16,7 +16,7 @@ from ev3dev2.button import Button
 from ev3dev2.display import Display
 import ev3dev2.fonts as fonts
 
-
+# ev3 brick implementation of the ihub interface
 class Brick(IHub):
     def __init__(self):
         self.titlefont = fonts.load("lutBS18")
@@ -55,6 +55,7 @@ class Brick(IHub):
         self.display.update()
 
 
+# lego implementation of the ipen interface
 class Pen(IPen):
     SPEED = 360
     SLOW_SPEED = 60
@@ -139,15 +140,13 @@ class Pen(IPen):
         y *= Pen.PIXELSIZE
         self.x.on_to_position(SpeedDPS(Pen.SPEED), -x)
         self.y.on_to_position(SpeedDPS(Pen.SPEED), -y * Pen.ASPECT)
-
         self.down()
         self.up()
-        
 
     def goto(self, x, y):
         dx = x - self.headpos[0]
         dy = y - self.headpos[1]
-        
+
         if dx == 0 and dy == 0:
             return
 
@@ -155,19 +154,20 @@ class Pen(IPen):
             speed_x = 0
             speed_y = Pen.SPEED
         elif dy == 0:  # horizontal line
-            speed_x =Pen.SPEED
+            speed_x = Pen.SPEED
             speed_y = 0
         else:
             slope = dy / dx
-            speed_x = Pen.SPEED / (1 + slope ** 2) ** 0.5
+            speed_x = Pen.SPEED / (1 + slope**2) ** 0.5
             speed_y = speed_x * slope
 
         self.x.on_to_position(SpeedDPS(speed_x), -x, block=False)
-        self.y.on_to_position(SpeedDPS(speed_y * Pen.ASPECT), -y * Pen.ASPECT, block=False)
+        self.y.on_to_position(
+            SpeedDPS(speed_y * Pen.ASPECT), -y * Pen.ASPECT, block=False
+        )
         self.x.wait_until_not_moving()
         self.y.wait_until_not_moving()
         self.headpos = (x, y)
-
 
     def line(self, x1, y1, x2, y2):
         if self.headpos != (x1, y1):
@@ -175,7 +175,6 @@ class Pen(IPen):
             self.goto(x1, y1)
         self.down()
         self.goto(x2, y2)
-
 
     def gohome(self):
         self.x.on_to_position(SpeedDPS(Pen.SPEED), 0, block=False)
@@ -223,10 +222,10 @@ class Pen(IPen):
         # z manual calibration
         while not self.brick.buttons.enter:
             if self.brick.buttons.up:
-                self.z.on(SpeedDPS(-Pen.SLOW_SPEED/2))
+                self.z.on(SpeedDPS(-Pen.SLOW_SPEED / 2))
                 broken = True
             elif self.brick.buttons.down:
-                self.z.on(SpeedDPS(Pen.SLOW_SPEED/2))
+                self.z.on(SpeedDPS(Pen.SLOW_SPEED / 2))
                 broken = True
             else:
                 self.z.off()

@@ -2,6 +2,8 @@ from printerface import *
 
 import pygame
 
+
+# virtual implementation of the ihub interface for testing
 class VirtualHub:
     def busy(self):
         print("Busy...")
@@ -14,7 +16,6 @@ class VirtualHub:
 
     def choice(self):
         return True
-        
 
     def title(self, text):
         self.text(text)
@@ -23,16 +24,17 @@ class VirtualHub:
         print(text)
 
 
+# virtual implementation of the ipen interface for testing
 class VirtualPen:
     DOTSIZE = 3
     TOPLEFT = (100, 100)
-    SIMSCALE = 1/10
+    SIMSCALE = 1 / 10
 
     def __init__(self):
         pygame.init()
         window_size = (800, 800)  # Set window size
         self.screen = pygame.display.set_mode(window_size)
-        pygame.display.set_caption('Virtual Print3r')
+        pygame.display.set_caption("Virtual Print3r")
         self.screen.fill((255, 255, 255))
         self.pencolor = (0, 0, 0)
 
@@ -49,8 +51,8 @@ class VirtualPen:
         print("Pen initialized")
 
     def dotcoord(self, x, y):
-        x = x * VirtualPen.DOTSIZE*2 + VirtualPen.TOPLEFT[0]
-        y = y * VirtualPen.DOTSIZE*2 + VirtualPen.TOPLEFT[1]
+        x = x * VirtualPen.DOTSIZE * 2 + VirtualPen.TOPLEFT[0]
+        y = y * VirtualPen.DOTSIZE * 2 + VirtualPen.TOPLEFT[1]
         pygame.draw.circle(self.screen, self.pencolor, (x, y), VirtualPen.DOTSIZE)
 
     def line(self, x1, y1, x2, y2):
@@ -69,4 +71,3 @@ class VirtualPen:
 
     def adjust(self):
         return True
-
